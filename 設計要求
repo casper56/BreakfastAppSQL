@@ -1,0 +1,4 @@
+設計需求, @3作業評量表\(MSSQL\ MySQL\).docx  , 只設計MSSQL , 其中 伺服器名稱'.\SQL2022' , 帳號sa , password : 1qaz@wsx ,承襲原有BreakfastAPP 的程式架構及介面,
+1.新增客戶資料庫, 請參照@客戶資料表欄位 要求, 地址選擇是匯入area.json, 使用 
+2.category_all.json 匯入轉換到 mealcattable 
+4.訂餐系統使用Meltable 品項, 存在ordertable

@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\casper\\workspace\\vscode\\dotnet10\\breakfast\\BreakfastApp\\BreakfastApp.csproj": {}
+    "D:\\casper\\workspace\\vscode\\dotnet10\\breakfast\\BreakfastAppSQL\\BreakfastApp.csproj": {}
   },
   "projects": {
-    "D:\\casper\\workspace\\vscode\\dotnet10\\breakfast\\BreakfastApp\\BreakfastApp.csproj": {
+    "D:\\casper\\workspace\\vscode\\dotnet10\\breakfast\\BreakfastAppSQL\\BreakfastApp.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\casper\\workspace\\vscode\\dotnet10\\breakfast\\BreakfastApp\\BreakfastApp.csproj",
+        "projectUniqueName": "D:\\casper\\workspace\\vscode\\dotnet10\\breakfast\\BreakfastAppSQL\\BreakfastApp.csproj",
         "projectName": "BreakfastApp",
-        "projectPath": "D:\\casper\\workspace\\vscode\\dotnet10\\breakfast\\BreakfastApp\\BreakfastApp.csproj",
+        "projectPath": "D:\\casper\\workspace\\vscode\\dotnet10\\breakfast\\BreakfastAppSQL\\BreakfastApp.csproj",
         "packagesPath": "C:\\Users\\USER\\.nuget\\packages\\",
-        "outputPath": "D:\\casper\\workspace\\vscode\\dotnet10\\breakfast\\BreakfastApp\\obj\\",
+        "outputPath": "D:\\casper\\workspace\\vscode\\dotnet10\\breakfast\\BreakfastAppSQL\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -50,6 +50,16 @@
       "frameworks": {
         "net10.0-windows7.0": {
           "targetAlias": "net10.0-windows",
+          "dependencies": {
+            "Dapper": {
+              "target": "Package",
+              "version": "[2.1.66, )"
+            },
+            "Microsoft.Data.SqlClient": {
+              "target": "Package",
+              "version": "[6.1.4, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -69,7 +79,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.102/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",

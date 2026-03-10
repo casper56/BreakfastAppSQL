@@ -1,0 +1,24 @@
+建立下列客戶資料庫
+
+CREATE TABLE Customers (
+    CustomerID INT PRIMARY KEY IDENTITY(1,1), -- 自動遞增主鍵
+    Name NVARCHAR(100) NOT NULL,              -- 客戶名稱
+    TaxID NVARCHAR(20),                       -- 統一編號
+    ContactPerson NVARCHAR(50),               -- 聯絡人
+    Mobile NVARCHAR(20),                      -- 手機
+    Email NVARCHAR(100),                      -- 電子郵件
+    
+    -- 細分後的地址欄位 --
+    PostalCode VARCHAR(5),                    -- 郵遞區號
+    City NVARCHAR(10),                        -- 縣市 (如：台北市)
+    District NVARCHAR(10),                    -- 鄉鎮市區 (如：大安區)
+    Street NVARCHAR(50),                      -- 路/街/段 (如：敦化南路二段)
+    SubStreet NVARCHAR(30),                   -- 巷/弄/棟 (如：100巷5弄A棟)
+    HouseNumber NVARCHAR(20),                 -- 號/之 (如：10號之1)
+    Floor_Other NVARCHAR(50),                 -- 樓層/其餘 (如：5樓之2)
+
+    CustomerLevel NVARCHAR(10),               -- 等級
+    Status BIT DEFAULT 1,                     -- 是否啟用 (1: 啟用, 0: 停用)
+    CreateDate DATETIME DEFAULT GETDATE(),    -- 建立時間
+    UpdateDate DATETIME                       -- 最後更新時間
+);

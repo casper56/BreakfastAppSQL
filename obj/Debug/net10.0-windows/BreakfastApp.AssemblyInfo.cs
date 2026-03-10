@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BreakfastApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+3468b9305433cb033a7760008db1853215fd83e6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c81ad2482378df6853b8a470489e05ed09c93539")]
 [assembly: System.Reflection.AssemblyProductAttribute("BreakfastApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BreakfastApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -87,6 +87,7 @@ namespace BreakfastApp
             pnlToolbar.Controls.Add(CreateBtn("🔼 排序", (s, e) => SortItems(true)));
             pnlToolbar.Controls.Add(CreateBtn("🖨️ 預覽菜單", (s, e) => PrintOrderPreview()));
             pnlToolbar.Controls.Add(CreateBtn("📜 歷史訂單", (s, e) => ShowOrderHistory()));
+            pnlToolbar.Controls.Add(CreateBtn("👥 客戶維護", (s, e) => ShowCustomerForm()));
 
             pnlToolbar.Controls.Add(new Label { Text = " |  🔍 搜尋:", AutoSize = true, Margin = new Padding(10, 8, 0, 0) });
             txtSearchMenu = new TextBox { Width = 120, Margin = new Padding(3, 5, 0, 0) };
@@ -679,6 +680,12 @@ namespace BreakfastApp
         private void ShowOrderHistory()
         {
             var form = new OrderHistoryForm(_orderService);
+            form.ShowDialog();
+        }
+
+        private void ShowCustomerForm()
+        {
+            var form = new CustomerForm();
             form.ShowDialog();
         }
 
