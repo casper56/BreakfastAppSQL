@@ -72,9 +72,27 @@ namespace BreakfastApp
                             }, trans);
                         }
                         trans.Commit();
+
+                        // 成功後，同步備份到 JSON
+                        BackupOrdersToJson();
                     }
                     catch { trans.Rollback(); throw; }
                 }
+            }
+        }
+
+        public void BackupOrdersToJson()
+        {
+            try
+            {
+                var orders = GetAllOrders();
+                string jsonPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "orders_backup.json");
+                string jsonContent = System.Text.Json.JsonSerializer.Serialize(orders, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+                System.IO.File.WriteAllText(jsonPath, jsonContent);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"備份訂單至 JSON 失敗: {ex.Message}");
             }
         }
 
@@ -106,7 +124,11 @@ namespace BreakfastApp
             }
         }
 
-        public void SaveOrders() { /* 在資料庫模式下無需實作儲存 JSON */ }
+        public void SaveOrders() 
+        { 
+            // 呼叫新的備份方法
+            BackupOrdersToJson();
+        }
 
         public List<Order> SearchOrders(string query)
         {

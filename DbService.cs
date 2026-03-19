@@ -26,7 +26,6 @@ namespace BreakfastApp
                     if (dbExists == 0)
                     {
                         masterDb.Execute("CREATE DATABASE BreakfastDB");
-                        Console.WriteLine("Database BreakfastDB created.");
                     }
                 }
 
@@ -34,23 +33,101 @@ namespace BreakfastApp
                 using (var db = new SqlConnection(ConnectionString))
                 {
                     db.Open();
-                    string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatabaseSetup.sql");
-                    if (!File.Exists(scriptPath)) scriptPath = "DatabaseSetup.sql"; // 為了開發方便
                     
+                    // 尋找腳本路徑：優先找執行目錄，再找專案目錄
+                    string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatabaseSetup.sql");
+                    if (!File.Exists(scriptPath)) 
+                    {
+                        // 嘗試往上找幾層 (針對開發環境 bin/Debug/netX.X)
+                        string devPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\DatabaseSetup.sql"));
+                        if (File.Exists(devPath)) scriptPath = devPath;
+                    }
+
                     if (File.Exists(scriptPath))
                     {
                         string sql = File.ReadAllText(scriptPath);
+                        // 執行整個腳本
                         db.Execute(sql);
-                        Console.WriteLine("Database tables setup completed.");
+                    }
+                    else
+                    {
+                        throw new FileNotFoundException("找不到 DatabaseSetup.sql 腳本檔案，請確認檔案位於程式目錄或專案根目錄。");
                     }
                 }
 
-                // 3. 如果 mealcattable 是空的，則匯入 JSON
+                // 3. 匯入初始資料
                 ImportInitialData();
+
+                // 4. 匯入訂單備份 (如果訂單表是空的)
+                ImportOrdersFromJson();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error initializing database: {ex.Message}");
+                System.Windows.Forms.MessageBox.Show($"資料庫初始化發生錯誤：\n{ex.Message}", "錯誤", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            }
+        }
+
+        private static void ImportOrdersFromJson()
+        {
+            using (var db = new SqlConnection(ConnectionString))
+            {
+                db.Open();
+                var count = db.ExecuteScalar<int>("SELECT COUNT(*) FROM ordertable");
+                if (count > 0) return; // 已經有資料
+
+                string jsonPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "orders_backup.json");
+                if (!File.Exists(jsonPath)) return;
+
+                try
+                {
+                    string jsonContent = File.ReadAllText(jsonPath);
+                    var orders = JsonSerializer.Deserialize<List<Order>>(jsonContent);
+                    if (orders == null) return;
+
+                    foreach (var order in orders)
+                    {
+                        using (var trans = db.BeginTransaction())
+                        {
+                            try
+                            {
+                                string sqlMaster = @"INSERT INTO ordertable (OrderNo, OrderDate, TotalAmount, TotalQuantity, Status)
+                                                    OUTPUT INSERTED.Id VALUES (@OrderNo, @OrderDate, @TotalAmount, @TotalQuantity, @Status)";
+
+                                int orderId = db.QuerySingle<int>(sqlMaster, new
+                                {
+                                    OrderNo = order.OrderId,
+                                    OrderDate = order.Timestamp,
+                                    TotalAmount = order.TotalAmount,
+                                    TotalQuantity = order.Items.Sum(x => x.Quantity),
+                                    Status = "Completed"
+                                }, trans);
+
+                                foreach (var item in order.Items)
+                                {
+                                    string sqlDetail = @"INSERT INTO orderdetails (OrderId, MenuItemId, ItemName, Spec, UnitPrice, Quantity, SubTotal)
+                                                        VALUES (@OrderId, @MenuItemId, @ItemName, @Spec, @UnitPrice, @Quantity, @SubTotal)";
+                                    db.Execute(sqlDetail, new
+                                    {
+                                        OrderId = orderId,
+                                        MenuItemId = item.ItemId,
+                                        ItemName = item.Name,
+                                        Spec = item.OptionName,
+                                        UnitPrice = item.Price,
+                                        Quantity = item.Quantity,
+                                        SubTotal = item.Price * item.Quantity
+                                    }, trans);
+                                }
+                                trans.Commit();
+                            }
+                            catch { trans.Rollback(); }
+                        }
+                    }
+                    Console.WriteLine("Imported orders_backup.json to database.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"還原訂單失敗: {ex.Message}");
+                }
             }
         }
 
