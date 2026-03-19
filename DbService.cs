@@ -18,53 +18,77 @@ namespace BreakfastApp
         {
             try
             {
-                // 1. 確保資料庫存在 (連線到 master)
+                // 1. 確保資料庫存在
                 using (var masterDb = new SqlConnection(MasterConnectionString))
                 {
                     masterDb.Open();
                     var dbExists = masterDb.ExecuteScalar<int>("SELECT COUNT(*) FROM sys.databases WHERE name = 'BreakfastDB'");
-                    if (dbExists == 0)
-                    {
-                        masterDb.Execute("CREATE DATABASE BreakfastDB");
-                    }
+                    if (dbExists == 0) masterDb.Execute("CREATE DATABASE BreakfastDB");
                 }
 
                 // 2. 執行 SQL 腳本建立資料表
                 using (var db = new SqlConnection(ConnectionString))
                 {
                     db.Open();
-                    
-                    // 尋找腳本路徑：優先找執行目錄，再找專案目錄
-                    string scriptPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DatabaseSetup.sql");
-                    if (!File.Exists(scriptPath)) 
-                    {
-                        // 嘗試往上找幾層 (針對開發環境 bin/Debug/netX.X)
-                        string devPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\DatabaseSetup.sql"));
-                        if (File.Exists(devPath)) scriptPath = devPath;
-                    }
-
+                    string scriptPath = FindFile("DatabaseSetup.sql");
                     if (File.Exists(scriptPath))
                     {
                         string sql = File.ReadAllText(scriptPath);
-                        // 執行整個腳本
-                        db.Execute(sql);
-                    }
-                    else
-                    {
-                        throw new FileNotFoundException("找不到 DatabaseSetup.sql 腳本檔案，請確認檔案位於程式目錄或專案根目錄。");
+                        // 移除 GO 並拆分執行，確保 Dapper 不報錯
+                        var commands = sql.Split(new[] { "GO" }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var cmd in commands) if (!string.IsNullOrWhiteSpace(cmd)) db.Execute(cmd);
                     }
                 }
 
-                // 3. 匯入初始資料
+                // 3. 匯入 100 筆模擬客戶 (強行匯入)
+                SeedCustomers();
+
+                // 4. 匯入菜單
                 ImportInitialData();
 
-                // 4. 匯入訂單備份 (如果訂單表是空的)
+                // 5. 匯入訂單
                 ImportOrdersFromJson();
             }
             catch (Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show($"資料庫初始化發生錯誤：\n{ex.Message}", "錯誤", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                System.Windows.Forms.MessageBox.Show($"初始化失敗：{ex.Message}");
             }
+        }
+
+        private static void SeedCustomers()
+        {
+            using (var db = new SqlConnection(ConnectionString))
+            {
+                db.Open();
+                int count = db.ExecuteScalar<int>("SELECT COUNT(*) FROM Customers");
+                if (count >= 100) return; // 已有資料就不重複產生
+
+                var service = new CustomerService();
+                service.SeedMockCustomers(100);
+            }
+        }
+
+        private static string FindFile(string fileName)
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string[] paths = {
+                Path.Combine(baseDir, fileName),
+                fileName,
+                // 開發環境往上找 (Debug)
+                Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\" + fileName)),
+                // 嘗試找 Release 目錄 (如果當前是 Debug)
+                Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\bin\Release\net10.0-windows\" + fileName)),
+                // 嘗試找 Debug 目錄 (如果當前是 Release)
+                Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\bin\Debug\net10.0-windows\" + fileName)),
+                // 專案根目錄
+                Path.GetFullPath(Path.Combine(baseDir, @"..\..\..\..\" + fileName))
+            };
+            
+            foreach (var p in paths)
+            {
+                try { if (File.Exists(p)) return p; } catch { }
+            }
+            return "";
         }
 
         private static void ImportOrdersFromJson()
@@ -75,15 +99,29 @@ namespace BreakfastApp
                 var count = db.ExecuteScalar<int>("SELECT COUNT(*) FROM ordertable");
                 if (count > 0) return; // 已經有資料
 
-                string jsonPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "orders_backup.json");
-                if (!File.Exists(jsonPath)) return;
+                // 嘗試多個檔名
+                string[] filesToTry = { "order.json", "orders.json", "orders_backup.json", "Order.json" };
+                string jsonPath = "";
+                foreach (var f in filesToTry)
+                {
+                    jsonPath = FindFile(f);
+                    if (!string.IsNullOrEmpty(jsonPath)) break;
+                }
+                
+                if (string.IsNullOrEmpty(jsonPath))
+                {
+                    // 暫時取消此處彈窗，避免干擾啟動，但如果您確定檔案存在卻沒匯入，請檢查此處
+                    return;
+                }
 
                 try
                 {
                     string jsonContent = File.ReadAllText(jsonPath);
+                    // 根據您 DataModels.cs 中的定義解析
                     var orders = JsonSerializer.Deserialize<List<Order>>(jsonContent);
-                    if (orders == null) return;
+                    if (orders == null || orders.Count == 0) return;
 
+                    int successCount = 0;
                     foreach (var order in orders)
                     {
                         using (var trans = db.BeginTransaction())
@@ -118,15 +156,21 @@ namespace BreakfastApp
                                     }, trans);
                                 }
                                 trans.Commit();
+                                successCount++;
                             }
-                            catch { trans.Rollback(); }
+                            catch (Exception exTrans)
+                            {
+                                trans.Rollback();
+                                Console.WriteLine($"單筆訂單匯入失敗: {exTrans.Message}");
+                            }
                         }
                     }
-                    Console.WriteLine("Imported orders_backup.json to database.");
+                    if (successCount > 0)
+                        System.Windows.Forms.MessageBox.Show($"成功從 {Path.GetFileName(jsonPath)} 匯入 {successCount} 筆訂單記錄！");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"還原訂單失敗: {ex.Message}");
+                    System.Windows.Forms.MessageBox.Show($"解析訂單 JSON 失敗 ({Path.GetFileName(jsonPath)}): {ex.Message}");
                 }
             }
         }

@@ -130,6 +130,74 @@ namespace BreakfastApp
             BackupOrdersToJson();
         }
 
+        /// <summary>
+        /// 從 JSON 檔案還原/匯入訂單資料至 SQL Server
+        /// </summary>
+        public void RestoreOrdersFromJson(string jsonPath)
+        {
+            if (!System.IO.File.Exists(jsonPath)) return;
+
+            try
+            {
+                string jsonContent = System.IO.File.ReadAllText(jsonPath);
+                var orders = System.Text.Json.JsonSerializer.Deserialize<List<Order>>(jsonContent);
+                if (orders == null) return;
+
+                using (var db = new SqlConnection(ConnectionString))
+                {
+                    db.Open();
+                    foreach (var order in orders)
+                    {
+                        // 1. 檢查該訂單號是否已存在
+                        bool exists = db.ExecuteScalar<int>("SELECT COUNT(1) FROM ordertable WHERE OrderNo = @OrderNo", new { OrderNo = order.OrderId }) > 0;
+                        if (exists) continue;
+
+                        using (var trans = db.BeginTransaction())
+                        {
+                            try
+                            {
+                                // 2. 插入主檔
+                                string sqlMaster = @"INSERT INTO ordertable (OrderNo, OrderDate, TotalAmount, TotalQuantity, Status)
+                                                    OUTPUT INSERTED.Id VALUES (@OrderNo, @OrderDate, @TotalAmount, @TotalQuantity, @Status)";
+
+                                int orderId = db.QuerySingle<int>(sqlMaster, new
+                                {
+                                    OrderNo = order.OrderId,
+                                    OrderDate = order.Timestamp,
+                                    TotalAmount = order.TotalAmount,
+                                    TotalQuantity = order.Items.Sum(x => x.Quantity),
+                                    Status = "Completed"
+                                }, trans);
+
+                                // 3. 插入明細
+                                foreach (var item in order.Items)
+                                {
+                                    string sqlDetail = @"INSERT INTO orderdetails (OrderId, MenuItemId, ItemName, Spec, UnitPrice, Quantity, SubTotal)
+                                                        VALUES (@OrderId, @MenuItemId, @ItemName, @Spec, @UnitPrice, @Quantity, @SubTotal)";
+                                    db.Execute(sqlDetail, new
+                                    {
+                                        OrderId = orderId,
+                                        MenuItemId = item.ItemId,
+                                        ItemName = item.Name,
+                                        Spec = item.OptionName,
+                                        UnitPrice = item.Price,
+                                        Quantity = item.Quantity,
+                                        SubTotal = item.Subtotal
+                                    }, trans);
+                                }
+                                trans.Commit();
+                            }
+                            catch { trans.Rollback(); }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"還原訂單失敗: {ex.Message}");
+            }
+        }
+
         public List<Order> SearchOrders(string query)
         {
             if (string.IsNullOrWhiteSpace(query)) return AllOrders;

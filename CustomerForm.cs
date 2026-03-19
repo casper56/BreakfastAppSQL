@@ -22,26 +22,33 @@ namespace BreakfastApp
 
         public CustomerForm()
         {
-            this.Text = "客戶資料維護";
-            this.Size = new Size(1000, 700);
+            this.Text = "客戶資料維護 (支援上下拉動測試)";
+            this.Size = new Size(1100, 800); // 放大視窗
             this.StartPosition = FormStartPosition.CenterParent;
             this.Font = new Font("Microsoft JhengHei", 9);
 
             _addressData = DbService.LoadAddressData();
-            if (_addressData.Count == 0)
-            {
-                MessageBox.Show("警告：無法載入地址資料 (area.json)，請檢查檔案是否存在於程式目錄。");
-            }
-
             SetupUI();
             LoadCustomerData();
         }
 
         private void SetupUI()
         {
-            // 上方編輯區
-            GroupBox gbEdit = new GroupBox { Text = "客戶詳情", Dock = DockStyle.Top, Height = 280, Padding = new Padding(10) };
-            this.Controls.Add(gbEdit);
+            SplitContainer split = new SplitContainer { 
+                Dock = DockStyle.Fill, 
+                Orientation = Orientation.Horizontal,
+                SplitterWidth = 6,
+                BorderStyle = BorderStyle.Fixed3D
+            };
+            this.Controls.Add(split);
+            
+            // 強制設定分隔線位置在 200 (往下調 50)，平衡編輯區與列表空間
+            split.SplitterDistance = 200; 
+            split.FixedPanel = FixedPanel.Panel1; // 固定上方高度，視窗放大時下方列表跟著變大
+
+            // --- 上方編輯區 (Panel1) ---
+            GroupBox gbEdit = new GroupBox { Text = "客戶詳情編輯", Dock = DockStyle.Fill, Padding = new Padding(10) };
+            split.Panel1.Controls.Add(gbEdit);
 
             TableLayoutPanel tlp = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 5 };
             tlp.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
@@ -53,7 +60,6 @@ namespace BreakfastApp
             tlp.Controls.Add(new Label { Text = "名稱:", Anchor = AnchorStyles.Right }, 0, row);
             txtName = new TextBox { Dock = DockStyle.Fill };
             tlp.Controls.Add(txtName, 1, row);
-
             tlp.Controls.Add(new Label { Text = "統一編號:", Anchor = AnchorStyles.Right }, 2, row);
             txtTaxID = new TextBox { Dock = DockStyle.Fill };
             tlp.Controls.Add(txtTaxID, 3, row);
@@ -62,7 +68,6 @@ namespace BreakfastApp
             tlp.Controls.Add(new Label { Text = "聯絡人:", Anchor = AnchorStyles.Right }, 0, row);
             txtContact = new TextBox { Dock = DockStyle.Fill };
             tlp.Controls.Add(txtContact, 1, row);
-
             tlp.Controls.Add(new Label { Text = "手機:", Anchor = AnchorStyles.Right }, 2, row);
             txtMobile = new TextBox { Dock = DockStyle.Fill };
             tlp.Controls.Add(txtMobile, 3, row);
@@ -71,7 +76,6 @@ namespace BreakfastApp
             tlp.Controls.Add(new Label { Text = "Email:", Anchor = AnchorStyles.Right }, 0, row);
             txtEmail = new TextBox { Dock = DockStyle.Fill };
             tlp.Controls.Add(txtEmail, 1, row);
-
             tlp.Controls.Add(new Label { Text = "等級:", Anchor = AnchorStyles.Right }, 2, row);
             cmbLevel = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
             cmbLevel.Items.AddRange(new string[] { "一般", "VIP", "黑名單" });
@@ -83,37 +87,7 @@ namespace BreakfastApp
             FlowLayoutPanel pnlAddress = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true };
             cmbCity = new ComboBox { Width = 100, DropDownStyle = ComboBoxStyle.DropDownList };
             cmbDistrict = new ComboBox { Width = 100, DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbStreet = new ComboBox { Width = 120, DropDownStyle = ComboBoxStyle.DropDown }; // 允許手動輸入
-            
-            cmbCity.Items.AddRange(_addressData.Keys.ToArray());
-            cmbCity.SelectedIndexChanged += (s, e) => {
-                cmbDistrict.Items.Clear();
-                cmbStreet.Items.Clear();
-                cmbStreet.Text = "";
-                if (cmbCity.SelectedItem != null && _addressData.ContainsKey(cmbCity.SelectedItem.ToString()!))
-                {
-                    var districts = _addressData[cmbCity.SelectedItem.ToString()!].Keys.ToArray();
-                    cmbDistrict.Items.AddRange(districts);
-                    if (cmbDistrict.Items.Count > 0) cmbDistrict.SelectedIndex = 0;
-                }
-            };
-
-            cmbDistrict.SelectedIndexChanged += (s, e) => {
-                cmbStreet.Items.Clear();
-                cmbStreet.Text = "";
-                if (cmbCity.SelectedItem != null && cmbDistrict.SelectedItem != null)
-                {
-                    string city = cmbCity.SelectedItem.ToString()!;
-                    string district = cmbDistrict.SelectedItem.ToString()!;
-                    if (_addressData.ContainsKey(city) && _addressData[city].ContainsKey(district))
-                    {
-                        var streets = _addressData[city][district];
-                        cmbStreet.Items.AddRange(streets.ToArray());
-                        if (cmbStreet.Items.Count > 0) cmbStreet.SelectedIndex = 0;
-                    }
-                }
-            };
-
+            cmbStreet = new ComboBox { Width = 120, DropDownStyle = ComboBoxStyle.DropDown };
             pnlAddress.Controls.Add(cmbCity);
             pnlAddress.Controls.Add(cmbDistrict);
             pnlAddress.Controls.Add(cmbStreet);
@@ -137,7 +111,6 @@ namespace BreakfastApp
             btnDelete = new Button { Text = "刪除", Width = 80 };
             btnUpdate = new Button { Text = "修改", Width = 80 };
             btnAdd = new Button { Text = "新增", Width = 80 };
-            
             pnlButtons.Controls.Add(btnClear);
             pnlButtons.Controls.Add(btnDelete);
             pnlButtons.Controls.Add(btnUpdate);
@@ -146,13 +119,13 @@ namespace BreakfastApp
 
             gbEdit.Controls.Add(tlp);
 
-            // 下方列表區
-            Panel pnlGrid = new Panel { Dock = DockStyle.Fill, Padding = new Padding(10) };
-            this.Controls.Add(pnlGrid);
+            // --- 下方列表區 (Panel2) ---
+            Panel pnlGrid = new Panel { Dock = DockStyle.Fill, Padding = new Padding(5) };
+            split.Panel2.Controls.Add(pnlGrid);
 
             Panel pnlSearch = new Panel { Dock = DockStyle.Top, Height = 40 };
-            pnlSearch.Controls.Add(new Label { Text = "🔍 搜尋:", Location = new Point(0, 5), AutoSize = true });
-            txtSearch = new TextBox { Location = new Point(60, 2), Width = 200 };
+            pnlSearch.Controls.Add(new Label { Text = "🔍 搜尋客戶:", Location = new Point(5, 10), AutoSize = true });
+            txtSearch = new TextBox { Location = new Point(85, 7), Width = 250 };
             txtSearch.TextChanged += (s, e) => LoadCustomerData(txtSearch.Text);
             pnlSearch.Controls.Add(txtSearch);
             pnlGrid.Controls.Add(pnlSearch);
@@ -163,18 +136,61 @@ namespace BreakfastApp
                 MultiSelect = false,
                 ReadOnly = true,
                 AllowUserToAddRows = false,
-                BackgroundColor = Color.White
+                AutoGenerateColumns = false,
+                BackgroundColor = Color.White,
+                ColumnHeadersVisible = true,
+                EnableHeadersVisualStyles = false,
+                ColumnHeadersHeight = 45, // 標高加大
+                RowHeadersVisible = false,
+                GridColor = Color.LightGray,
+                BorderStyle = BorderStyle.FixedSingle
             };
-            dgvCustomers.CellClick += (s, e) => {
-                if (e.RowIndex >= 0) BindSelectedCustomer();
-            };
+            
+            // 設定標頭字體與顏色
+            dgvCustomers.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(220, 220, 220);
+            dgvCustomers.ColumnHeadersDefaultCellStyle.ForeColor = Color.Black;
+            dgvCustomers.ColumnHeadersDefaultCellStyle.Font = new Font("Microsoft JhengHei", 10, FontStyle.Bold);
+            
+            // 防止標頭在點擊時變色 (維持原色)
+            dgvCustomers.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 220, 220);
+            dgvCustomers.ColumnHeadersDefaultCellStyle.SelectionForeColor = Color.Black;
+            dgvCustomers.EnableHeadersVisualStyles = false;
+
+            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Name", HeaderText = "客戶名稱", Width = 150 });
+            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Mobile", HeaderText = "手機", Width = 130 });
+            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "City", HeaderText = "縣市", Width = 80 });
+            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "District", HeaderText = "行政區", Width = 100 });
+            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TaxID", HeaderText = "統編", Width = 100 });
+            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "CustomerLevel", HeaderText = "等級", Width = 80 });
+            dgvCustomers.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "CreateDate", HeaderText = "註冊日期", Width = 150 });
+            dgvCustomers.Columns[dgvCustomers.Columns.Count - 1].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+
             pnlGrid.Controls.Add(dgvCustomers);
             dgvCustomers.BringToFront();
+
+            // 地址連動事件... (保持原樣)
+            cmbCity.Items.AddRange(_addressData.Keys.ToArray());
+            cmbCity.SelectedIndexChanged += (s, e) => {
+                cmbDistrict.Items.Clear();
+                if (cmbCity.SelectedItem != null) {
+                    var dists = _addressData[cmbCity.SelectedItem.ToString()!].Keys.ToArray();
+                    cmbDistrict.Items.AddRange(dists);
+                    if (cmbDistrict.Items.Count > 0) cmbDistrict.SelectedIndex = 0;
+                }
+            };
+            cmbDistrict.SelectedIndexChanged += (s, e) => {
+                cmbStreet.Items.Clear();
+                if (cmbCity.SelectedItem != null && cmbDistrict.SelectedItem != null) {
+                    var streets = _addressData[cmbCity.SelectedItem.ToString()!][cmbDistrict.SelectedItem.ToString()!];
+                    cmbStreet.Items.AddRange(streets.ToArray());
+                }
+            };
 
             btnAdd.Click += (s, e) => SaveCustomer(true);
             btnUpdate.Click += (s, e) => SaveCustomer(false);
             btnDelete.Click += (s, e) => DeleteCustomer();
             btnClear.Click += (s, e) => ClearFields();
+            dgvCustomers.CellClick += (s, e) => { if (e.RowIndex >= 0) BindSelectedCustomer(); };
         }
 
         private void LoadCustomerData(string keyword = "")
@@ -186,12 +202,6 @@ namespace BreakfastApp
                     string sql = "SELECT * FROM Customers WHERE Name LIKE @Keyword OR Mobile LIKE @Keyword OR TaxID LIKE @Keyword ORDER BY CreateDate DESC";
                     var list = db.Query<Customer>(sql, new { Keyword = $"%{keyword}%" }).ToList();
                     dgvCustomers.DataSource = list;
-                    
-                    if (dgvCustomers.Columns.Count > 0)
-                    {
-                        string[] hiddenColumns = { "Email", "PostalCode", "Street", "SubStreet", "HouseNumber", "Floor_Other", "Status", "UpdateDate" };
-                        foreach (var col in hiddenColumns) if (dgvCustomers.Columns.Contains(col)) dgvCustomers.Columns[col].Visible = false;
-                    }
                 }
             } catch { }
         }
