@@ -34,16 +34,17 @@ namespace BreakfastApp
 
         private void SetupUI()
         {
-            SplitContainer split = new SplitContainer { 
-                Dock = DockStyle.Fill, 
+            SplitContainer split = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
                 SplitterWidth = 6,
                 BorderStyle = BorderStyle.Fixed3D
             };
             this.Controls.Add(split);
-            
+
             // 強制設定分隔線位置在 200 (往下調 50)，平衡編輯區與列表空間
-            split.SplitterDistance = 200; 
+            split.SplitterDistance = 200;
             split.FixedPanel = FixedPanel.Panel1; // 固定上方高度，視窗放大時下方列表跟著變大
 
             // --- 上方編輯區 (Panel1) ---
@@ -130,8 +131,9 @@ namespace BreakfastApp
             pnlSearch.Controls.Add(txtSearch);
             pnlGrid.Controls.Add(pnlSearch);
 
-            dgvCustomers = new DataGridView { 
-                Dock = DockStyle.Fill, 
+            dgvCustomers = new DataGridView
+            {
+                Dock = DockStyle.Fill,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 MultiSelect = false,
                 ReadOnly = true,
@@ -145,12 +147,12 @@ namespace BreakfastApp
                 GridColor = Color.LightGray,
                 BorderStyle = BorderStyle.FixedSingle
             };
-            
+
             // 設定標頭字體與顏色
             dgvCustomers.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(220, 220, 220);
             dgvCustomers.ColumnHeadersDefaultCellStyle.ForeColor = Color.Black;
             dgvCustomers.ColumnHeadersDefaultCellStyle.Font = new Font("Microsoft JhengHei", 10, FontStyle.Bold);
-            
+
             // 防止標頭在點擊時變色 (維持原色)
             dgvCustomers.ColumnHeadersDefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 220, 220);
             dgvCustomers.ColumnHeadersDefaultCellStyle.SelectionForeColor = Color.Black;
@@ -170,17 +172,21 @@ namespace BreakfastApp
 
             // 地址連動事件... (保持原樣)
             cmbCity.Items.AddRange(_addressData.Keys.ToArray());
-            cmbCity.SelectedIndexChanged += (s, e) => {
+            cmbCity.SelectedIndexChanged += (s, e) =>
+            {
                 cmbDistrict.Items.Clear();
-                if (cmbCity.SelectedItem != null) {
+                if (cmbCity.SelectedItem != null)
+                {
                     var dists = _addressData[cmbCity.SelectedItem.ToString()!].Keys.ToArray();
                     cmbDistrict.Items.AddRange(dists);
                     if (cmbDistrict.Items.Count > 0) cmbDistrict.SelectedIndex = 0;
                 }
             };
-            cmbDistrict.SelectedIndexChanged += (s, e) => {
+            cmbDistrict.SelectedIndexChanged += (s, e) =>
+            {
                 cmbStreet.Items.Clear();
-                if (cmbCity.SelectedItem != null && cmbDistrict.SelectedItem != null) {
+                if (cmbCity.SelectedItem != null && cmbDistrict.SelectedItem != null)
+                {
                     var streets = _addressData[cmbCity.SelectedItem.ToString()!][cmbDistrict.SelectedItem.ToString()!];
                     cmbStreet.Items.AddRange(streets.ToArray());
                 }
@@ -199,18 +205,20 @@ namespace BreakfastApp
             {
                 using (var db = new SqlConnection(ConnectionString))
                 {
-                    string sql = "SELECT * FROM Customers WHERE Name LIKE @Keyword OR Mobile LIKE @Keyword OR TaxID LIKE @Keyword ORDER BY CreateDate DESC";
+                    //string sql = "SELECT * FROM Customers WHERE Name LIKE @Keyword OR Mobile LIKE @Keyword OR TaxID LIKE @Keyword ORDER BY CreateDate DESC";
+                    string sql = "SELECT * FROM Customers WHERE Name LIKE @Keyword OR Mobile LIKE @Keyword OR TaxID LIKE @Keyword ORDER BY CustomerID ASC";
                     var list = db.Query<Customer>(sql, new { Keyword = $"%{keyword}%" }).ToList();
                     dgvCustomers.DataSource = list;
                 }
-            } catch { }
+            }
+            catch { }
         }
 
         private void BindSelectedCustomer()
         {
             if (dgvCustomers.SelectedRows.Count == 0) return;
             var c = (Customer)dgvCustomers.SelectedRows[0].DataBoundItem;
-            
+
             txtName.Text = c.Name;
             txtTaxID.Text = c.TaxID;
             txtContact.Text = c.ContactPerson;
@@ -244,17 +252,18 @@ namespace BreakfastApp
                 using (var db = new SqlConnection(ConnectionString))
                 {
                     string sql;
-                    var param = new {
+                    var param = new
+                    {
                         Name = txtName.Text,
                         TaxID = txtTaxID.Text,
                         ContactPerson = txtContact.Text,
                         Mobile = txtMobile.Text,
                         Email = txtEmail.Text,
-                                            City = cmbCity.SelectedItem?.ToString(),
-                                            District = cmbDistrict.SelectedItem?.ToString(),
-                                            Street = cmbStreet.Text,
-                                            SubStreet = txtSubStreet.Text,
-                        
+                        City = cmbCity.SelectedItem?.ToString(),
+                        District = cmbDistrict.SelectedItem?.ToString(),
+                        Street = cmbStreet.Text,
+                        SubStreet = txtSubStreet.Text,
+
                         HouseNumber = txtHouseNum.Text,
                         Floor_Other = txtFloor.Text,
                         CustomerLevel = cmbLevel.SelectedItem?.ToString(),
@@ -299,7 +308,13 @@ namespace BreakfastApp
                     LoadCustomerData();
                     ClearFields();
                 }
-            } catch { }
+            }
+            catch { }
+        }
+
+        private void InitializeComponent()
+        {
+
         }
 
         private void ClearFields()
