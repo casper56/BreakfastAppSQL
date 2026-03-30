@@ -16,14 +16,15 @@ namespace BreakfastApp
         private DataGridView dgvCustomers;
         private TextBox txtName, txtTaxID, txtContact, txtMobile, txtEmail, txtSubStreet, txtHouseNum, txtFloor;
         private ComboBox cmbCity, cmbDistrict, cmbStreet, cmbLevel;
+        private CheckedListBox clbPayment;
         private CheckBox chkStatus;
         private Button btnAdd, btnUpdate, btnDelete, btnClear;
         private TextBox txtSearch;
 
         public CustomerForm()
         {
-            this.Text = "客戶資料維護 (支援上下拉動測試)";
-            this.Size = new Size(1100, 800); // 放大視窗
+            this.Text = "客戶資料維護";
+            this.Size = new Size(1100, 850); // 略微調大
             this.StartPosition = FormStartPosition.CenterParent;
             this.Font = new Font("Microsoft JhengHei", 9);
 
@@ -43,15 +44,15 @@ namespace BreakfastApp
             };
             this.Controls.Add(split);
 
-            // 強制設定分隔線位置在 200 (往下調 50)，平衡編輯區與列表空間
-            split.SplitterDistance = 200;
-            split.FixedPanel = FixedPanel.Panel1; // 固定上方高度，視窗放大時下方列表跟著變大
+            // 強制設定分隔線位置在 250 (往下調)，為付款方式留出空間
+            split.SplitterDistance = 250;
+            split.FixedPanel = FixedPanel.Panel1; 
 
             // --- 上方編輯區 (Panel1) ---
             GroupBox gbEdit = new GroupBox { Text = "客戶詳情編輯", Dock = DockStyle.Fill, Padding = new Padding(10) };
             split.Panel1.Controls.Add(gbEdit);
 
-            TableLayoutPanel tlp = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 5 };
+            TableLayoutPanel tlp = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 6 };
             tlp.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
             tlp.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35));
             tlp.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 15));
@@ -104,10 +105,20 @@ namespace BreakfastApp
             tlp.Controls.Add(pnlAddress2, 3, row);
 
             row++;
-            chkStatus = new CheckBox { Text = "啟用狀態", Checked = true };
-            tlp.Controls.Add(chkStatus, 1, row);
+            tlp.Controls.Add(new Label { Text = "付款方式:", Anchor = AnchorStyles.Right }, 0, row);
+            clbPayment = new CheckedListBox { Dock = DockStyle.Fill, Height = 50 };
+            clbPayment.Items.AddRange(new string[] { "信用卡付款", "電子支付", "現金" });
+            tlp.Controls.Add(clbPayment, 1, row);
+            
+            // 將狀態與按鈕放在同一列的不同儲存格
+            chkStatus = new CheckBox { Text = "啟用狀態", Checked = true, Anchor = AnchorStyles.Left };
+            tlp.Controls.Add(chkStatus, 2, row);
 
-            FlowLayoutPanel pnlButtons = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft };
+            FlowLayoutPanel pnlButtons = new FlowLayoutPanel { 
+                Dock = DockStyle.Fill, 
+                FlowDirection = FlowDirection.RightToLeft,
+                Margin = new Padding(0, 50, 25, 0) // 
+            };
             btnClear = new Button { Text = "清除", Width = 80 };
             btnDelete = new Button { Text = "刪除", Width = 80 };
             btnUpdate = new Button { Text = "修改", Width = 80 };
@@ -240,6 +251,13 @@ namespace BreakfastApp
             txtFloor.Text = c.Floor_Other;
             chkStatus.Checked = c.Status;
 
+            // 處理付款方式 CheckedListBox
+            for (int i = 0; i < clbPayment.Items.Count; i++)
+            {
+                string item = clbPayment.Items[i].ToString()!;
+                clbPayment.SetItemChecked(i, !string.IsNullOrEmpty(c.Payment) && c.Payment.Split(',').Contains(item));
+            }
+
             dgvCustomers.Tag = c.CustomerID;
         }
 
@@ -249,6 +267,9 @@ namespace BreakfastApp
 
             try
             {
+                // 取得勾選的付款方式
+                string payment = string.Join(",", clbPayment.CheckedItems.Cast<string>());
+
                 using (var db = new SqlConnection(ConnectionString))
                 {
                     string sql;
@@ -267,6 +288,7 @@ namespace BreakfastApp
                         HouseNumber = txtHouseNum.Text,
                         Floor_Other = txtFloor.Text,
                         CustomerLevel = cmbLevel.SelectedItem?.ToString(),
+                        Payment = payment,
                         Status = chkStatus.Checked,
                         UpdateDate = DateTime.Now,
                         CustomerID = (int?)(dgvCustomers.Tag ?? 0)
@@ -274,15 +296,15 @@ namespace BreakfastApp
 
                     if (isNew)
                     {
-                        sql = @"INSERT INTO Customers (Name, TaxID, ContactPerson, Mobile, Email, City, District, Street, SubStreet, HouseNumber, Floor_Other, CustomerLevel, Status, CreateDate)
-                                VALUES (@Name, @TaxID, @ContactPerson, @Mobile, @Email, @City, @District, @Street, @SubStreet, @HouseNumber, @Floor_Other, @CustomerLevel, @Status, GETDATE())";
+                        sql = @"INSERT INTO Customers (Name, TaxID, ContactPerson, Mobile, Email, City, District, Street, SubStreet, HouseNumber, Floor_Other, CustomerLevel, Payment, Status, CreateDate)
+                                VALUES (@Name, @TaxID, @ContactPerson, @Mobile, @Email, @City, @District, @Street, @SubStreet, @HouseNumber, @Floor_Other, @CustomerLevel, @Payment, @Status, GETDATE())";
                     }
                     else
                     {
                         if (dgvCustomers.Tag == null) return;
                         sql = @"UPDATE Customers SET Name=@Name, TaxID=@TaxID, ContactPerson=@ContactPerson, Mobile=@Mobile, Email=@Email, 
                                 City=@City, District=@District, Street=@Street, SubStreet=@SubStreet, HouseNumber=@HouseNumber, 
-                                Floor_Other=@Floor_Other, CustomerLevel=@CustomerLevel, Status=@Status, UpdateDate=@UpdateDate 
+                                Floor_Other=@Floor_Other, CustomerLevel=@CustomerLevel, Payment=@Payment, Status=@Status, UpdateDate=@UpdateDate 
                                 WHERE CustomerID=@CustomerID";
                     }
 
@@ -323,6 +345,8 @@ namespace BreakfastApp
             cmbStreet.Text = ""; txtSubStreet.Clear(); txtHouseNum.Clear(); txtFloor.Clear();
             cmbCity.SelectedIndex = -1; cmbDistrict.Items.Clear(); cmbStreet.Items.Clear();
             cmbLevel.SelectedIndex = 0; chkStatus.Checked = true;
+            // 清除 CheckedListBox
+            for (int i = 0; i < clbPayment.Items.Count; i++) clbPayment.SetItemChecked(i, false);
             dgvCustomers.Tag = null;
         }
     }

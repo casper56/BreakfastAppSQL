@@ -23,6 +23,7 @@ namespace BreakfastApp
         public string? HouseNumber { get; set; }
         public string? Floor_Other { get; set; }
         public string? CustomerLevel { get; set; }
+        public string? Payment { get; set; }
         public bool Status { get; set; } = true;
         public DateTime CreateDate { get; set; } = DateTime.Now;
         public DateTime? UpdateDate { get; set; }
@@ -89,6 +90,9 @@ namespace BreakfastApp
     {
         [JsonPropertyName("order_id")]
         public string OrderId { get; set; } = string.Empty;
+
+        [JsonPropertyName("customer_id")]
+        public int? CustomerId { get; set; }
 
         [JsonPropertyName("timestamp")]
         public DateTime Timestamp { get; set; } = DateTime.Now;

@@ -33,6 +33,7 @@ namespace BreakfastApp
             _menuService = new MenuService(_jsonPath);
             _orderService = new OrderService(); // 初始化
             SetupDynamicUI();
+            GenerateMenuTabs(); // 確保啟動時產生選單分頁
         }
 
         // 清除快取以釋放資源
@@ -545,7 +546,7 @@ namespace BreakfastApp
                 Application.DoEvents(); // 強制更新畫面顯示 Loading 文字
 
                 _menuService = new MenuService(_jsonPath);
-                _menuService.LoadData();
+                _menuService.ImportFromJson(_jsonPath); // 確保匯入到資料庫
                 RefreshState();
             }
             catch (Exception ex)
@@ -697,17 +698,29 @@ namespace BreakfastApp
                 return;
             }
 
+            // 1. 彈出客戶選擇選單
+            int? selectedCustomerId = null;
+            using (var selectForm = new CustomerSelectForm())
+            {
+                if (selectForm.ShowDialog() != DialogResult.OK) return; // 如果按取消，則不繼續結帳
+                if (selectForm.SelectedCustomer != null)
+                {
+                    selectedCustomerId = selectForm.SelectedCustomer.CustomerID;
+                }
+            }
+
             if (MessageBox.Show($"確認結帳？金額: ${_cartItems.Sum(x => x.Subtotal)}", "結帳確認", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
-                // 1. 生成訂單物件
+                // 2. 生成訂單物件
                 var order = new Order
                 {
                     OrderId = _orderService.GenerateOrderId(),
+                    CustomerId = selectedCustomerId, // 填入選擇的客戶ID
                     Timestamp = DateTime.Now,
                     Items = new List<CartItem>(_cartItems)
                 };
 
-                // 2. 儲存至 JSON
+                // 3. 儲存至資料庫
                 _orderService.AddOrder(order);
 
                 // 3. 詢問列印選項

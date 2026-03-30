@@ -53,6 +53,7 @@ namespace BreakfastApp
                 BackgroundColor = Color.White
             };
             dgvOrders.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "OrderId", HeaderText = "訂單編號", Width = 150 });
+            dgvOrders.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "CustomerId", HeaderText = "客戶ID", Width = 80 }); // 新增客戶ID欄位
             dgvOrders.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "Timestamp", HeaderText = "時間", Width = 180 });
             dgvOrders.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = "TotalAmount", HeaderText = "總金額", Width = 80 });
             

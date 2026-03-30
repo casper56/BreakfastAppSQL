@@ -16,6 +16,7 @@ BEGIN
         HouseNumber NVARCHAR(20),
         Floor_Other NVARCHAR(50),
         CustomerLevel NVARCHAR(10),
+        Payment NVARCHAR(255),
         Status BIT DEFAULT 1,
         CreateDate DATETIME DEFAULT GETDATE(),
         UpdateDate DATETIME

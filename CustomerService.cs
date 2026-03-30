@@ -16,6 +16,7 @@ namespace BreakfastApp
         private string[] LastNames = { "陳", "林", "李", "王", "張", "劉", "黃", "蔡", "吳", "鄭", "謝", "郭", "洪", "邱", "曾", "廖", "賴", "徐", "周", "葉" };
         private string[] FirstNames = { "嘉玲", "淑芬", "雅婷", "美玲", "惠珍", "志明", "俊傑", "家豪", "建宏", "冠宇", "欣怡", "宜君", "心怡", "曉薇", "建良", "正雄", "志強", "子豪", "夢瑤", "天宇" };
         private string[] Levels = { "一般", "VIP", "白金", "黃金" };
+        private string[] PaymentMethods = { "信用卡付款", "電子支付", "現金" };
 
         public void SeedMockCustomers(int count)
         {
@@ -53,6 +54,10 @@ namespace BreakfastApp
                     var streets = districts[district];
                     string street = (streets != null && streets.Count > 0) ? streets[random.Next(streets.Count)] : "中山路";
 
+                    // 隨機選取 1-3 種付款方式
+                    var selectedPayments = PaymentMethods.OrderBy(x => random.Next()).Take(random.Next(1, 4)).ToList();
+                    string payment = string.Join(",", selectedPayments);
+
                     string lastName = LastNames[random.Next(LastNames.Length)];
                     string firstName = FirstNames[random.Next(FirstNames.Length)];
 
@@ -67,6 +72,7 @@ namespace BreakfastApp
                         Street = street,
                         HouseNumber = $"{random.Next(1, 200)}號",
                         CustomerLevel = Levels[random.Next(Levels.Length)],
+                        Payment = payment,
                         Status = true,
                         CreateDate = DateTime.Now.AddDays(-random.Next(30, 365))
                     });
@@ -77,9 +83,9 @@ namespace BreakfastApp
                 {
                     db.Open();
                     string sql = @"INSERT INTO Customers (
-                                    Name, ContactPerson, Mobile, Email, City, District, Street, HouseNumber, CustomerLevel, Status, CreateDate
+                                    Name, ContactPerson, Mobile, Email, City, District, Street, HouseNumber, CustomerLevel, Payment, Status, CreateDate
                                     ) VALUES (
-                                    @Name, @ContactPerson, @Mobile, @Email, @City, @District, @Street, @HouseNumber, @CustomerLevel, @Status, @CreateDate)";
+                                    @Name, @ContactPerson, @Mobile, @Email, @City, @District, @Street, @HouseNumber, @CustomerLevel, @Payment, @Status, @CreateDate)";
                     
                     int rows = db.Execute(sql, customers);
                     System.Windows.Forms.MessageBox.Show($"成功匯入 {rows} 筆模擬客戶資料！");

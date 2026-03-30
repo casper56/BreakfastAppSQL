@@ -46,12 +46,25 @@ namespace BreakfastApp
                 // 4. 匯入菜單
                 ImportInitialData();
 
-                // 5. 匯入訂單
-                ImportOrdersFromJson();
+                // 5. 匯入模擬訂單
+                SeedOrders();
             }
             catch (Exception ex)
             {
                 System.Windows.Forms.MessageBox.Show($"初始化失敗：{ex.Message}");
+            }
+        }
+
+        private static void SeedOrders()
+        {
+            using (var db = new SqlConnection(ConnectionString))
+            {
+                db.Open();
+                int count = db.ExecuteScalar<int>("SELECT COUNT(*) FROM ordertable");
+                if (count >= 100) return; // 已有資料就不重複產生
+
+                var service = new OrderService();
+                service.SeedMockOrders(100);
             }
         }
 
@@ -128,13 +141,14 @@ namespace BreakfastApp
                         {
                             try
                             {
-                                string sqlMaster = @"INSERT INTO ordertable (OrderNo, OrderDate, TotalAmount, TotalQuantity, Status)
-                                                    OUTPUT INSERTED.Id VALUES (@OrderNo, @OrderDate, @TotalAmount, @TotalQuantity, @Status)";
+                                string sqlMaster = @"INSERT INTO ordertable (OrderNo, OrderDate, CustomerId, TotalAmount, TotalQuantity, Status)
+                                                    OUTPUT INSERTED.Id VALUES (@OrderNo, @OrderDate, @CustomerId, @TotalAmount, @TotalQuantity, @Status)";
 
                                 int orderId = db.QuerySingle<int>(sqlMaster, new
                                 {
                                     OrderNo = order.OrderId,
                                     OrderDate = order.Timestamp,
+                                    CustomerId = order.CustomerId,
                                     TotalAmount = order.TotalAmount,
                                     TotalQuantity = order.Items.Sum(x => x.Quantity),
                                     Status = "Completed"

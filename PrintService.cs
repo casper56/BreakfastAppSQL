@@ -36,6 +36,13 @@ namespace BreakfastApp
                     // 2. 基本資訊
                     g.DrawString($"單號: {order.OrderId}", fontContent, Brushes.Black, margin, y);
                     y += type == ReceiptType.Kitchen ? 30 : 20;
+
+                    if (order.CustomerId.HasValue)
+                    {
+                        g.DrawString($"客戶ID: {order.CustomerId}", fontContent, Brushes.Black, margin, y);
+                        y += type == ReceiptType.Kitchen ? 30 : 20;
+                    }
+
                     g.DrawString($"時間: {order.Timestamp:HH:mm:ss}", fontSmall, Brushes.Black, margin, y);
                     y += 25;
                     g.DrawLine(Pens.Black, margin, y, width + margin, y);
