@@ -74,9 +74,11 @@ namespace BreakfastApp
                     {
                         foreach (DataGridViewRow row in dgvOrders.SelectedRows)
                         {
-                            if (row.DataBoundItem is Order order) _orderService.AllOrders.Remove(order);
+                            if (row.DataBoundItem is Order order)
+                            {
+                                _orderService.DeleteOrder(order.OrderId);
+                            }
                         }
-                        _orderService.SaveOrders();
                         LoadGrid();
                     }
                 }

@@ -126,12 +126,46 @@ namespace BreakfastApp
             }
         }
 
-        public void SaveOrders() 
-        { 
+        public void SaveOrders()
+        {
             // 呼叫新的備份方法
             BackupOrdersToJson();
         }
 
+        public void DeleteOrder(string orderId)
+        {
+            try
+            {
+                using (var db = new SqlConnection(ConnectionString))
+                {
+                    db.Open();
+                    using (var trans = db.BeginTransaction())
+                    {
+                        try
+                        {
+                            var masterId = db.QueryFirstOrDefault<int?>("SELECT Id FROM ordertable WHERE OrderNo = @OrderNo", new { OrderNo = orderId }, trans);
+                            if (masterId.HasValue)
+                            {
+                                db.Execute("DELETE FROM orderdetails WHERE OrderId = @Id", new { Id = masterId.Value }, trans);
+                                db.Execute("DELETE FROM ordertable WHERE Id = @Id", new { Id = masterId.Value }, trans);
+                            }
+                            trans.Commit();
+                        }
+                        catch
+                        {
+                            trans.Rollback();
+                            throw;
+                        }
+                    }
+                }
+                // 刪除後順便更新 JSON 備份
+                BackupOrdersToJson();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"刪除訂單失敗: {ex.Message}");
+            }
+        }
         /// <summary>
         /// 從 JSON 檔案還原/匯入訂單資料至 SQL Server
         /// </summary>
