@@ -46,7 +46,7 @@ namespace BreakfastApp
 
         private void SetupDynamicUI()
         {
-            this.Text = "早餐店點餐管理系統 (智慧選擇版) - v1.2";
+            this.Text = "早餐店點餐管理系統 (SQL) - v1.0";
             this.Size = new Size(1100, 900); // 調整寬度至 1100
             this.FormBorderStyle = FormBorderStyle.FixedSingle; // 禁止調整大小
             this.MaximizeBox = false; // 停用最大化按鈕
